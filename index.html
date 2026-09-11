@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latest News</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --muted: #6b7280;
+    --accent: #2e5bff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  header h1 { font-size: 2.2rem; letter-spacing: -0.5px; }
+  header p { margin-top: 8px; opacity: 0.85; }
+  .controls {
+    max-width: 720px;
+    margin: 24px auto 0;
+    padding: 0 20px;
+    text-align: center;
+  }
+  .controls input {
+    width: 100%;
+    max-width: 480px;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  .controls button {
+    margin-top: 12px;
+    padding: 12px 24px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .controls button:hover { opacity: 0.9; }
+  main {
+    max-width: 720px;
+    margin: 24px auto 60px;
+    padding: 0 20px;
+  }
+  #status { text-align: center; color: var(--muted); padding: 20px; }
+  .article {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .article h2 { font-size: 1.15rem; line-height: 1.4; }
+  .article h2 a { color: var(--text); text-decoration: none; }
+  .article h2 a:hover { color: var(--accent); }
+  .meta {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .meta .source::before { content: "via "; }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding-bottom: 30px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Latest News</h1>
+    <p>Fresh stories from around the web</p>
+    <div class="controls">
+      <input id="query" type="text" placeholder="Search news (e.g. technology, sports, AI)..." value="">
+      <br>
+      <button id="searchBtn">Search</button>
+    </div>
+  </header>
+  <main id="news"></main>
+  <footer>Powered by Hacker News Search API</footer>
+
+<script>
+  const newsEl = document.getElementById("news");
+  const queryEl = document.getElementById("query");
+  const searchBtn = document.getElementById("searchBtn");
+
+  function timeAgo(ts) {
+    const secs = Math.floor((Date.now() - ts * 1000) / 1000);
+    if (secs < 60) return "just now";
+    const units = [
+      ["year", 31536000], ["month", 2592000], ["week", 604800],
+      ["day", 86400], ["hour", 3600], ["minute", 60]
+    ];
+    for (const [label, size] of units) {
+      if (secs >= size) {
+        const v = Math.floor(secs / size);
+        return `${v} ${label}${v > 1 ? "s" : ""} ago`;
+      }
+    }
+    return "just now";
+  }
+
+  async function fetchNews(query) {
+    newsEl.innerHTML = `<div id="status">Loading latest news...</div>`;
+    const params = new URLSearchParams({
+      query: query || "",
+      tags: "story",
+      numericFilters: "points>50",
+      hitsPerPage: "25"
+    });
+    const url = `https://hn.algolia.com/api/v1/search?${params.toString()}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderNews(data.hits);
+    } catch (err) {
+      newsEl.innerHTML = `<div id="status">Failed to load news: ${err.message}</div>`;
+    }
+  }
+
+  function renderNews(hits) {
+    const items = hits.filter(h => h.title && h.url);
+    if (!items.length) {
+      newsEl.innerHTML = `<div id="status">No stories found. Try another search.</div>`;
+      return;
+    }
+    newsEl.innerHTML = items.map(h => `
+      <article class="article">
+        <h2><a href="${h.url}" target="_blank" rel="noopener noreferrer">${h.title}</a></h2>
+        <div class="meta">
+          <span class="source">${h.projectID || "news"}</span>
+          <span>${timeAgo(h.created_at_i)}</span>
+          <span>${h.points} points</span>
+          <span>${h.num_comments} comments</span>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  searchBtn.addEventListener("click", () => location.hash = queryEl.value);
+  window.addEventListener("hashchange", () => {
+    queryEl.value = decodeURIComponent(location.hash.slice(1));
+    fetchNews(queryEl.value);
+  });
+  queryEl.addEventListener("keydown", e => { if (e.key === "Enter") location.hash = queryEl.value; });
+
+  const initial = decodeURIComponent(location.hash.slice(1));
+  queryEl.value = initial;
+  fetchNews(initial);
+</script>
+</body>
+</html>
