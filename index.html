@@ -56,6 +56,36 @@
     margin: 24px auto 60px;
     padding: 0 20px;
   }
+  .subscribe {
+    max-width: 720px;
+    margin: 0 auto 40px;
+    padding: 20px;
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .subscribe h2 { font-size: 1.3rem; margin-bottom: 6px; }
+  .subscribe p { color: var(--muted); font-size: 0.9rem; margin-bottom: 14px; }
+  .subscribe form { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .subscribe input {
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+    flex: 1 1 200px;
+  }
+  .subscribe button {
+    padding: 10px 24px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .subscribe button:hover { opacity: 0.9; }
+  #subMsg { margin: 10px 0 0; font-weight: 600; min-height: 1.2em; }
   #status { text-align: center; color: var(--muted); padding: 20px; }
   .article {
     background: var(--card);
@@ -95,6 +125,18 @@
     </div>
   </header>
   <main id="news"></main>
+
+  <section class="subscribe">
+    <h2>Subscribe for the latest news</h2>
+    <p>Get fresh stories delivered on every visit. Enter your details below.</p>
+    <form id="subForm">
+      <input id="subName" type="text" placeholder="Your name (optional)">
+      <input id="subEmail" type="email" placeholder="you@example.com" required>
+      <button type="submit">Subscribe</button>
+    </form>
+    <p id="subMsg"></p>
+  </section>
+
   <footer>Powered by Hacker News Search API</footer>
 
 <script>
@@ -166,6 +208,33 @@
   const initial = decodeURIComponent(location.hash.slice(1));
   queryEl.value = initial;
   fetchNews(initial);
+
+  const subForm = document.getElementById("subForm");
+  const subMsg = document.getElementById("subMsg");
+  subForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    subMsg.textContent = "Subscribing...";
+    subMsg.style.color = "var(--muted)";
+    try {
+      const body = new URLSearchParams({
+        email: document.getElementById("subEmail").value,
+        name: document.getElementById("subName").value
+      });
+      const res = await fetch("/subscribe", { method: "POST", body });
+      const data = await res.json();
+      if (res.ok) {
+        subMsg.textContent = "Thanks — you're subscribed!";
+        subMsg.style.color = "#16a34a";
+        subForm.reset();
+      } else {
+        subMsg.textContent = data.error || "Something went wrong.";
+        subMsg.style.color = "#dc2626";
+      }
+    } catch (err) {
+      subMsg.textContent = "Failed to subscribe: " + err.message;
+      subMsg.style.color = "#dc2626";
+    }
+  });
 </script>
 </body>
 </html>
